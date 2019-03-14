@@ -5,10 +5,6 @@ extern crate serde_derive;
 #[macro_use]
 extern crate error_chain;
 
-lazy_static! {
-	static ref HTTP_CLIENT: reqwest::Client = reqwest::Client::new();
-}
-
 mod byond;
 mod errors;
 
@@ -18,6 +14,26 @@ use std::{
 	collections::BTreeMap,
 	os::raw::{c_char, c_int},
 };
+
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+const PKG_NAME: &str = env!("CARGO_PKG_NAME");
+
+lazy_static! {
+	static ref HTTP_CLIENT: reqwest::Client = setup_http_client();
+}
+
+fn setup_http_client() -> reqwest::Client {
+	use reqwest::{
+		Client,
+		header::{HeaderMap, USER_AGENT}
+	};
+	let mut headers = HeaderMap::new();
+	headers.insert(USER_AGENT, format!("{}/{}", PKG_NAME, VERSION).parse().unwrap());
+	Client::builder()
+		.default_headers(headers)
+		.build()
+		.unwrap()
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn send_post_request(n: c_int, v: *const *const c_char) -> *const i8 {
