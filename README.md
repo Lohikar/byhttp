@@ -22,7 +22,7 @@ Linux 64-bit cross-compile:
 
 ```sh
 $ rustup target add i686-unknown-linux-gnu
-$ cargo build --release --target i686-unknown-linux gnu
+$ cargo build --release --target i686-unknown-linux-gnu
 ```
 
 ## Interface
