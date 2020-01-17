@@ -1,9 +1,9 @@
+#![allow(clippy::missing_safety_doc)]
+
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate serde_derive;
-#[macro_use]
-extern crate error_chain;
 
 mod byond;
 mod errors;
@@ -50,7 +50,7 @@ struct ByondRetVal {
 	body: Option<String>,
 }
 
-fn unwrap_result(err: Result<(String, u16)>) -> String {
+fn unwrap_result(err: Result<(String, u16), ByError>) -> String {
 	let retval = match err {
 		Ok((body, status_code)) => ByondRetVal {
 			status_code,
@@ -64,7 +64,7 @@ fn unwrap_result(err: Result<(String, u16)>) -> String {
 			ByondRetVal {
 				status_code: 0,
 				error: Some(err.to_string()),
-				error_code: error_code,
+				error_code,
 				body: None,
 			}
 		}
@@ -73,9 +73,9 @@ fn unwrap_result(err: Result<(String, u16)>) -> String {
 	serde_json::to_string(&retval).unwrap()
 }
 
-fn send_post_internal(args: Vec<Cow<'_, str>>) -> Result<(String, u16)> {
+fn send_post_internal(args: Vec<Cow<'_, str>>) -> Result<(String, u16), ByError> {
 	if args.len() < 2 {
-		return Err(ErrorKind::NotEnoughArgs.into());
+		return Err(ByError::NotEnoughArgs);
 	}
 
 	// arg 1 is URL

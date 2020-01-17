@@ -1,32 +1,33 @@
-#![allow(deprecated)]
+use thiserror::Error;
 
-error_chain! {
-	foreign_links {
-		Http(reqwest::Error);
-		Json(serde_json::Error);
-		Io(std::io::Error);
-	}
-	errors {
-		NotEnoughArgs {
-			description("Not enough arguments were passed to the function.")
-		}
-		TooManyArgs {
-			description("Too many arguments were passed to the function.")
-		}
+#[derive(Error, Debug)]
+pub enum ByError {
+	#[error("Not enough arguments were passed to the function.")]
+	NotEnoughArgs,
+	#[error("Too many arguments were passed to the function.")]
+	TooManyArgs,
+	#[error("{source}")]
+	Json {
+		#[from]
+		source: serde_json::Error
+	},
+	#[error("{source}")]
+	Http {
+		#[from]
+		source: reqwest::Error
 	}
 }
 
-impl Error {
+impl ByError {
 	pub fn to_error_code(&self) -> u16 {
 		// these are arbitrary - 0 is reserved for success
-		match self.0 {
-			ErrorKind::NotEnoughArgs => 1,
-			ErrorKind::TooManyArgs => 2,
-			ErrorKind::Http(ref inner_err) if inner_err.is_timeout() => 101,
-			ErrorKind::Http(ref inner_err) if inner_err.is_redirect() => 102,
-			ErrorKind::Http(_) => 100,
-			ErrorKind::Json(_) => 200,
-			_ => 99, // unknown
+		match self {
+			Self::NotEnoughArgs => 1,
+			Self::TooManyArgs => 2,
+			Self::Http { ref source } if source.is_timeout() => 101,
+			Self::Http { ref source } if source.is_redirect() => 102,
+			Self::Http { .. } => 100,
+			Self::Json { .. } => 200
 		}
 	}
 }
