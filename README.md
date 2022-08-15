@@ -7,7 +7,7 @@ ByHTTP is a basic HTTP POST library for BYOND, meant to be a cross-platform repl
 Requirements:
 
 - Cargo
-- Rust 1.32 stable
+- Rust 1.36 stable
 
 BYOND is 32-bit on all platforms, so you must cross-compile this library to 32-bit if you're on a 64-bit system. If you're on a 32-bit system, you can just compile with `cargo build --release`.
 
