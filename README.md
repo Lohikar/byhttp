@@ -20,16 +20,18 @@ Windows 64-bit cross-compile:
 
 Linux 64-bit cross-compile:
 
+For cross-compilation on Linux, use of [cross](https://crates.io/crates/cross) is recommended. This requires your host support Docker -- WSL1 will not cut it, though WSL2 will. Binaries built on Ubuntu or Arch may not work on distros with older glibc, like Debian or CentOS. These older distributions are not supported by ByHTTP, though they may work.
+
 ```sh
-$ rustup target add i686-unknown-linux-gnu
-$ cargo build --release --target i686-unknown-linux-gnu
+$ cross build --release --target i686-unknown-linux-gnu
 ```
 
 ## Interface
 
-ByHTTP exposes the following function(s) - fields with ? are optional:
+ByHTTP exposes the following functions - fields with ? are optional:
 
 - `send_post_request(url, payload, headers?)`
+- `send_get_request(url, headers?)`
 
 Function calls will return a JSON object containing the result of the request, in one of the two forms:
 
@@ -56,6 +58,7 @@ This is returned if the input to the function was invalid, or if ByHTTP failed t
 - `101` - Connection timed out or failed to connect.
 - `102` - Too many redirects.
 - `200` - Error decoding or encoding JSON.
+- `201` - Response body too large (>10MB).
 - `99` - Unknown error.
 
 ### Success / HTTP Error
