@@ -1,8 +1,6 @@
 #![allow(clippy::missing_safety_doc)]
 
 #[macro_use]
-extern crate lazy_static;
-#[macro_use]
 extern crate serde_derive;
 
 mod byond;
@@ -13,32 +11,34 @@ use std::{
 	borrow::Cow,
 	collections::BTreeMap,
 	os::raw::{c_char, c_int},
+	time::Duration,
 };
+use once_cell::sync::Lazy;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const PKG_NAME: &str = env!("CARGO_PKG_NAME");
 
-lazy_static! {
-	static ref HTTP_CLIENT: reqwest::Client = setup_http_client();
-}
+static HTTP_AGENT: Lazy<ureq::Agent> = Lazy::new(construct_agent);
 
-fn setup_http_client() -> reqwest::Client {
-	use reqwest::{
-		Client,
-		header::{HeaderMap, USER_AGENT}
-	};
-	let mut headers = HeaderMap::new();
-	headers.insert(USER_AGENT, format!("{}/{}", PKG_NAME, VERSION).parse().unwrap());
-	Client::builder()
-		.default_headers(headers)
+fn construct_agent() -> ureq::Agent {
+	ureq::AgentBuilder::new()
+		.timeout(Duration::from_secs(1))
+		.user_agent(&format!("{}/{}", PKG_NAME, VERSION))
+		.max_idle_connections(10)
 		.build()
-		.unwrap()
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn send_post_request(n: c_int, v: *const *const c_char) -> *const i8 {
 	let args = byond::parse_args(n, v);
 	let res = unwrap_result(send_post_internal(args));
+	byond::byond_return(|| Some(res))
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn send_get_request(n: c_int, v: *const *const c_char) -> *const i8 {
+	let args = byond::parse_args(n, v);
+	let res = unwrap_result(send_get_internal(args));
 	byond::byond_return(|| Some(res))
 }
 
@@ -82,18 +82,50 @@ fn send_post_internal(args: Vec<Cow<'_, str>>) -> Result<(String, u16), ByError>
 	// arg 2 is body
 	// arg 3 is a JSON map of headers
 	let body: String = args[1].as_ref().to_owned();
-	let mut req = HTTP_CLIENT.post(&*args[0]).body(body);
-	if args.len() > 2 {
-		let headers: BTreeMap<&str, &str> = serde_json::from_str(&args[2])?;
-		for (key, value) in headers {
-			req = req.header(key, value);
-		}
+
+	let mut req = HTTP_AGENT.post(&args[0]);
+
+	match args.len() {
+		3 => {
+			let headers: BTreeMap<&str, &str> = serde_json::from_str(&args[2])?;
+			for (key, value) in headers {
+				req = req.set(key, value);
+			}
+		},
+		4.. => return Err(ByError::TooManyArgs),
+		_ => unreachable!()
 	}
 
-	let mut resp = req.send()?;
+	let response = req.send_string(&body)?;
+	let status = response.status();
+	let body = response.into_string().map_err(|_| ByError::BodyTooLarge)?;
 
-	let body_resp = resp.text()?;
-	let status = resp.status();
+	Ok((body, status))
+}
 
-	Ok((body_resp, status.as_u16()))
+fn send_get_internal(args: Vec<Cow<'_, str>>) -> Result<(String, u16), ByError> {
+	if args.is_empty() {
+		return Err(ByError::NotEnoughArgs);
+	}
+
+	// arg 0 is URL
+	// arg 1 is a JSON map of headers
+	let mut req = HTTP_AGENT.get(&args[0]);
+
+	match args.len() {
+		2 => {
+			let headers: BTreeMap<&str, &str> = serde_json::from_str(&args[1])?;
+			for (key, value) in headers {
+				req = req.set(key, value);
+			}
+		},
+		3.. => return Err(ByError::TooManyArgs),
+		_ => unreachable!(),
+	}
+
+	let response = req.call()?;
+	let status = response.status();
+	let body = response.into_string().map_err(|_| ByError::BodyTooLarge)?;
+
+	Ok((body, status))
 }

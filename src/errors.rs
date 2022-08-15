@@ -11,23 +11,25 @@ pub enum ByError {
 		#[from]
 		source: serde_json::Error
 	},
-	#[error("{source}")]
-	Http {
-		#[from]
-		source: reqwest::Error
-	}
+	#[error("ureq error: {0}")]
+	Ureq(#[from] ureq::Error),
+	#[error("Body too long to decode (>10MB).")]
+	BodyTooLarge,
 }
 
 impl ByError {
 	pub fn to_error_code(&self) -> u16 {
 		// these are arbitrary - 0 is reserved for success
+		// Should not exceed a u24 due to BYOND.
 		match self {
 			Self::NotEnoughArgs => 1,
 			Self::TooManyArgs => 2,
-			Self::Http { ref source } if source.is_timeout() => 101,
-			Self::Http { ref source } if source.is_redirect() => 102,
-			Self::Http { .. } => 100,
-			Self::Json { .. } => 200
+			Self::Ureq(ureq::Error::Transport(t)) if t.kind() == ureq::ErrorKind::Io => 101,	// timeout
+			Self::Ureq(ureq::Error::Transport(t)) if t.kind() == ureq::ErrorKind::TooManyRedirects => 102,
+			Self::Ureq(ureq::Error::Status(..)) => 100,
+			Self::Ureq(..) => 99,
+			Self::Json { .. } => 200,
+			Self::BodyTooLarge => 201,
 		}
 	}
 }
