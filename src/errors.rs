@@ -26,7 +26,6 @@ impl ByError {
 			Self::TooManyArgs => 2,
 			Self::Ureq(ureq::Error::Transport(t)) if t.kind() == ureq::ErrorKind::Io => 101,	// timeout
 			Self::Ureq(ureq::Error::Transport(t)) if t.kind() == ureq::ErrorKind::TooManyRedirects => 102,
-			Self::Ureq(ureq::Error::Status(..)) => 100,
 			Self::Ureq(..) => 99,
 			Self::Json { .. } => 200,
 			Self::BodyTooLarge => 201,

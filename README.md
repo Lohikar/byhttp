@@ -54,7 +54,6 @@ This is returned if the input to the function was invalid, or if ByHTTP failed t
 
 - `1` - Too few arguments passed to function.
 - `2` - Too many arguments passed to function.
-- `100` - Unknown HTTP error.
 - `101` - Connection timed out or failed to connect.
 - `102` - Too many redirects.
 - `200` - Error decoding or encoding JSON.

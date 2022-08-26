@@ -96,7 +96,12 @@ fn send_post_internal(args: Vec<Cow<'_, str>>) -> Result<(String, u16), ByError>
 		_ => unreachable!()
 	}
 
-	let response = req.send_string(&body)?;
+	// Match v0.1 behavior: don't discard unsuccessful HTTP error codes.
+	let response = match req.send_string(&body) {
+		Ok(val) => val,
+		Err(ureq::Error::Status(_code, resp)) => resp,
+		Err(e) => return Err(e.into())
+	};
 	let status = response.status();
 	let body = response.into_string().map_err(|_| ByError::BodyTooLarge)?;
 
@@ -123,7 +128,12 @@ fn send_get_internal(args: Vec<Cow<'_, str>>) -> Result<(String, u16), ByError> 
 		_ => unreachable!(),
 	}
 
-	let response = req.call()?;
+	// Match v0.1 behavior: don't discard unsuccessful HTTP error codes.
+	let response = match req.call() {
+		Ok(val) => val,
+		Err(ureq::Error::Status(_code, resp)) => resp,
+		Err(e) => return Err(e.into())
+	};
 	let status = response.status();
 	let body = response.into_string().map_err(|_| ByError::BodyTooLarge)?;
 
