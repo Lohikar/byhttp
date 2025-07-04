@@ -1,6 +1,6 @@
 [package]
 name = "byhttp"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["Lohikar <lohikar@protonmail.com>"]
 edition = "2018"
 publish = false
