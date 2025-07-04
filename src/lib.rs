@@ -1,4 +1,5 @@
 #![allow(clippy::missing_safety_doc)]
+#![allow(clippy::uninlined_format_args)]
 
 #[macro_use]
 extern crate serde_derive;
@@ -21,11 +22,12 @@ const PKG_NAME: &str = env!("CARGO_PKG_NAME");
 static HTTP_AGENT: Lazy<ureq::Agent> = Lazy::new(construct_agent);
 
 fn construct_agent() -> ureq::Agent {
-	ureq::AgentBuilder::new()
-		.timeout(Duration::from_secs(1))
-		.user_agent(&format!("{}/{}", PKG_NAME, VERSION))
+	let config = ureq::Agent::config_builder()
+		.timeout_global(Some(Duration::from_secs(1)))
+		.user_agent(format!("{}/{}", PKG_NAME, VERSION))
 		.max_idle_connections(10)
-		.build()
+		.build();
+	ureq::Agent::new_with_config(config)
 }
 
 #[no_mangle]
@@ -82,14 +84,15 @@ fn send_post_internal(args: Vec<Cow<'_, str>>) -> Result<(String, u16), ByError>
 	// arg 2 is body
 	// arg 3 is a JSON map of headers
 	let body: String = args[1].as_ref().to_owned();
+	let uri: http::Uri = args[0].parse()?;
 
-	let mut req = HTTP_AGENT.post(&args[0]);
+	let mut req = HTTP_AGENT.post(uri);
 
 	match args.len() {
 		3 => {
 			let headers: BTreeMap<&str, &str> = serde_json::from_str(&args[2])?;
 			for (key, value) in headers {
-				req = req.set(key, value);
+				req = req.header(key, value);
 			}
 		},
 		4.. => return Err(ByError::TooManyArgs),
@@ -97,13 +100,12 @@ fn send_post_internal(args: Vec<Cow<'_, str>>) -> Result<(String, u16), ByError>
 	}
 
 	// Match v0.1 behavior: don't discard unsuccessful HTTP error codes.
-	let response = match req.send_string(&body) {
+	let response = match req.send(&body) {
 		Ok(val) => val,
-		Err(ureq::Error::Status(_code, resp)) => resp,
 		Err(e) => return Err(e.into())
 	};
-	let status = response.status();
-	let body = response.into_string().map_err(|_| ByError::BodyTooLarge)?;
+	let status = response.status().as_u16();
+	let body = response.into_body().read_to_string()?;
 
 	Ok((body, status))
 }
@@ -115,13 +117,14 @@ fn send_get_internal(args: Vec<Cow<'_, str>>) -> Result<(String, u16), ByError> 
 
 	// arg 0 is URL
 	// arg 1 is a JSON map of headers
-	let mut req = HTTP_AGENT.get(&args[0]);
+	let uri: http::Uri = args[0].parse()?;
+	let mut req = HTTP_AGENT.get(uri);
 
 	match args.len() {
 		2 => {
 			let headers: BTreeMap<&str, &str> = serde_json::from_str(&args[1])?;
 			for (key, value) in headers {
-				req = req.set(key, value);
+				req = req.header(key, value);
 			}
 		},
 		3.. => return Err(ByError::TooManyArgs),
@@ -131,11 +134,10 @@ fn send_get_internal(args: Vec<Cow<'_, str>>) -> Result<(String, u16), ByError> 
 	// Match v0.1 behavior: don't discard unsuccessful HTTP error codes.
 	let response = match req.call() {
 		Ok(val) => val,
-		Err(ureq::Error::Status(_code, resp)) => resp,
 		Err(e) => return Err(e.into())
 	};
-	let status = response.status();
-	let body = response.into_string().map_err(|_| ByError::BodyTooLarge)?;
+	let status = response.status().as_u16();
+	let body = response.into_body().read_to_string()?;
 
 	Ok((body, status))
 }
