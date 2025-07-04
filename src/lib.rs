@@ -30,14 +30,14 @@ fn construct_agent() -> ureq::Agent {
 	ureq::Agent::new_with_config(config)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn send_post_request(n: c_int, v: *const *const c_char) -> *const i8 {
 	let args = byond::parse_args(n, v);
 	let res = unwrap_result(send_post_internal(args));
 	byond::byond_return(|| Some(res))
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn send_get_request(n: c_int, v: *const *const c_char) -> *const i8 {
 	let args = byond::parse_args(n, v);
 	let res = unwrap_result(send_get_internal(args));

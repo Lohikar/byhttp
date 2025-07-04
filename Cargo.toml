@@ -2,7 +2,7 @@
 name = "byhttp"
 version = "0.3.0"
 authors = ["Lohikar <lohikar@protonmail.com>"]
-edition = "2018"
+edition = "2024"
 publish = false
 
 [lib]
