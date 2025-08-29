@@ -13,8 +13,8 @@ pub enum ByError {
 	},
 	#[error("ureq error: {0}")]
 	Ureq(#[from] ureq::Error),
-	#[error("Body too long to decode (>10MB).")]
-	BodyTooLarge,
+	#[error("Invalid URI: {0}")]
+	InvalidUri(#[from] http::uri::InvalidUri)
 }
 
 impl ByError {
@@ -24,11 +24,11 @@ impl ByError {
 		match self {
 			Self::NotEnoughArgs => 1,
 			Self::TooManyArgs => 2,
-			Self::Ureq(ureq::Error::Transport(t)) if t.kind() == ureq::ErrorKind::Io => 101,	// timeout
-			Self::Ureq(ureq::Error::Transport(t)) if t.kind() == ureq::ErrorKind::TooManyRedirects => 102,
+			Self::InvalidUri(_) => 3,
+			Self::Ureq(ureq::Error::Timeout(_t)) => 101,	// timeout
+			Self::Ureq(ureq::Error::TooManyRedirects) => 102,
 			Self::Ureq(..) => 99,
 			Self::Json { .. } => 200,
-			Self::BodyTooLarge => 201,
 		}
 	}
 }

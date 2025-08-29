@@ -1,8 +1,8 @@
 [package]
 name = "byhttp"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["Lohikar <lohikar@protonmail.com>"]
-edition = "2018"
+edition = "2024"
 publish = false
 
 [lib]
@@ -17,5 +17,6 @@ once_cell = "1.13"
 serde = "1.0"
 serde_json = "1.0"
 serde_derive = "1.0"
-thiserror = "1.0"
-ureq = { version = "2.4", features = ["native-certs"] }
+thiserror = "2.0"
+ureq = { version = "3.0", features = ["platform-verifier"] }
+http = "1.3"
