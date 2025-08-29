@@ -25,8 +25,9 @@ impl ByError {
 			Self::NotEnoughArgs => 1,
 			Self::TooManyArgs => 2,
 			Self::InvalidUri(_) => 3,
-			Self::Ureq(ureq::Error::Timeout(_t)) => 101,	// timeout
+			Self::Ureq(ureq::Error::Timeout(_t)) => 101,
 			Self::Ureq(ureq::Error::TooManyRedirects) => 102,
+			Self::Ureq(ureq::Error::BodyExceedsLimit(_limit)) => 201,
 			Self::Ureq(..) => 99,
 			Self::Json { .. } => 200,
 		}
