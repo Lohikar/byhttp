@@ -54,10 +54,10 @@ This is returned if the input to the function was invalid, or if ByHTTP failed t
 
 - `1` - Too few arguments passed to function.
 - `2` - Too many arguments passed to function.
+- `3` - The specified URI was invalid.
 - `101` - Connection timed out or failed to connect.
 - `102` - Too many redirects.
 - `200` - Error decoding or encoding JSON.
-- `201` - Response body too large (>10MB).
 - `99` - Unknown error.
 
 ### Success / HTTP Error
