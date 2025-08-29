@@ -18,6 +18,8 @@ use once_cell::sync::Lazy;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const PKG_NAME: &str = env!("CARGO_PKG_NAME");
+/// Maximum response body size allowed.
+const MAX_BODY: u64 = 10_485_760;	// 10 MiB -- This number is arbitrary, it's just ureq's old built-in limit.
 
 static HTTP_AGENT: Lazy<ureq::Agent> = Lazy::new(construct_agent);
 
@@ -105,7 +107,11 @@ fn send_post_internal(args: Vec<Cow<'_, str>>) -> Result<(String, u16), ByError>
 		Err(e) => return Err(e.into())
 	};
 	let status = response.status().as_u16();
-	let body = response.into_body().read_to_string()?;
+	let body = response
+		.into_body()
+		.with_config()
+		.limit(MAX_BODY)
+		.read_to_string()?;
 
 	Ok((body, status))
 }
@@ -137,7 +143,11 @@ fn send_get_internal(args: Vec<Cow<'_, str>>) -> Result<(String, u16), ByError> 
 		Err(e) => return Err(e.into())
 	};
 	let status = response.status().as_u16();
-	let body = response.into_body().read_to_string()?;
+	let body = response
+		.into_body()
+		.with_config()
+		.limit(MAX_BODY)
+		.read_to_string()?;
 
 	Ok((body, status))
 }
